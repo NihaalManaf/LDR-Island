@@ -11,11 +11,13 @@ final class IslandViewController: NSViewController {
     private var isExpanded: Bool = false
 
     private let hoverView = HoverTrackingContainerView(frame: .zero)
-    private let headerContainer = NotchSurfaceView()
+    private let chromeView = IslandChromeView()
+    private let headerContainer = NSView()
     private let gapSpacer = NSView()
     private let leadingBubble = AttachedBubbleView(corners: [.layerMinXMinYCorner, .layerMaxXMinYCorner])
     private let trailingBubble = AttachedBubbleView(corners: [.layerMinXMinYCorner, .layerMaxXMinYCorner])
-    private let bodyPanel = RoundedPanelView()
+    private let bodyMaskView = NSView()
+    private let bodyPanel = NSView()
 
     private var headerWidthConstraint: NSLayoutConstraint?
     private var headerHeightConstraint: NSLayoutConstraint?
@@ -26,6 +28,20 @@ final class IslandViewController: NSViewController {
     private var bodyWidthConstraint: NSLayoutConstraint?
     private var bodyHeightConstraint: NSLayoutConstraint?
     private var bodyTopConstraint: NSLayoutConstraint?
+    private var bodyRevealWidthConstraint: NSLayoutConstraint?
+    private var bodyRevealHeightConstraint: NSLayoutConstraint?
+
+    private var isWindowExpanded: Bool = false
+    private let openAnimationDuration: TimeInterval = 0.64
+    private let closeAnimationDuration: TimeInterval = 0.56
+
+    private var openTransitionTimingFunction: CAMediaTimingFunction {
+        CAMediaTimingFunction(controlPoints: 0.2, 0.88, 0.24, 1)
+    }
+
+    private var closeTransitionTimingFunction: CAMediaTimingFunction {
+        CAMediaTimingFunction(controlPoints: 0.22, 0.82, 0.24, 1)
+    }
 
     private lazy var avatarView = PixelAvatarView(style: configuration.partner.avatar)
     private let partnerCaptionLabel = IslandViewController.makeLabel(fontSize: 10, weight: .bold, color: .secondaryLabelColor)
@@ -83,6 +99,26 @@ final class IslandViewController: NSViewController {
         layoutMetrics.expandedSize
     }
 
+    var openTransitionDuration: TimeInterval {
+        openAnimationDuration
+    }
+
+    var closeTransitionDuration: TimeInterval {
+        closeAnimationDuration
+    }
+
+    var preferredOpenTimingFunction: CAMediaTimingFunction {
+        openTransitionTimingFunction
+    }
+
+    var preferredCloseTimingFunction: CAMediaTimingFunction {
+        closeTransitionTimingFunction
+    }
+
+    private var collapsedBodyRevealWidth: CGFloat {
+        min(layoutMetrics.bodyWidth, max(layoutMetrics.headerWidth, layoutMetrics.bodyWidth * 0.84))
+    }
+
     override func loadView() {
         hoverView.onHoverChanged = { [weak self] isHovering in
             self?.onHoverChanged?(isHovering)
@@ -97,9 +133,15 @@ final class IslandViewController: NSViewController {
         super.viewDidLoad()
         buildUI()
         updateLayoutMetrics(layoutMetrics)
+        setWindowExpanded(configuration.startsExpanded)
         setExpanded(configuration.startsExpanded)
         startClockTimer()
         refreshAll(referenceDate: Date())
+    }
+
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        updateChromeGeometry()
     }
 
     func updateLayoutMetrics(_ metrics: IslandLayoutMetrics) {
@@ -112,16 +154,63 @@ final class IslandViewController: NSViewController {
         bodyWidthConstraint?.constant = metrics.bodyWidth
         bodyHeightConstraint?.constant = metrics.bodyHeight
         bodyTopConstraint?.constant = metrics.bodyTopSpacing
-        headerLeadingConstraint?.constant = isExpanded ? metrics.expandedLeftPadding : 0
+        bodyRevealWidthConstraint?.constant = isExpanded ? metrics.bodyWidth : collapsedBodyRevealWidth
+        bodyRevealHeightConstraint?.constant = isExpanded ? metrics.bodyHeight : 0
+        headerLeadingConstraint?.constant = isWindowExpanded ? metrics.expandedLeftPadding : 0
         view.layoutSubtreeIfNeeded()
+        updateChromeGeometry()
     }
 
-    func setExpanded(_ expanded: Bool) {
+    func setWindowExpanded(_ expanded: Bool) {
+        isWindowExpanded = expanded
+    }
+
+    func setExpanded(_ expanded: Bool, animated: Bool = false) {
         isExpanded = expanded
-        bodyPanel.isHidden = !expanded
-        headerLeadingConstraint?.constant = expanded ? layoutMetrics.expandedLeftPadding : 0
-        view.layoutSubtreeIfNeeded()
-        view.window?.invalidateShadow()
+
+        let targetWidth = expanded ? layoutMetrics.bodyWidth : collapsedBodyRevealWidth
+        let targetHeight = expanded ? layoutMetrics.bodyHeight : 0
+        let targetAlpha: CGFloat = expanded ? 1 : 0
+        let targetHeaderLeading = isWindowExpanded ? layoutMetrics.expandedLeftPadding : 0
+
+        guard animated else {
+            bodyMaskView.isHidden = !expanded
+            bodyMaskView.alphaValue = targetAlpha
+            bodyRevealWidthConstraint?.constant = targetWidth
+            bodyRevealHeightConstraint?.constant = targetHeight
+            headerLeadingConstraint?.constant = targetHeaderLeading
+            view.layoutSubtreeIfNeeded()
+            updateChromeGeometry()
+            view.window?.invalidateShadow()
+            return
+        }
+
+        if expanded {
+            bodyMaskView.isHidden = false
+            bodyMaskView.alphaValue = 0
+            bodyRevealWidthConstraint?.constant = collapsedBodyRevealWidth
+            bodyRevealHeightConstraint?.constant = 0
+            view.layoutSubtreeIfNeeded()
+            updateChromeGeometry()
+        }
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = expanded ? openAnimationDuration : closeAnimationDuration
+            context.timingFunction = expanded ? openTransitionTimingFunction : closeTransitionTimingFunction
+            bodyRevealWidthConstraint?.animator().constant = targetWidth
+            bodyRevealHeightConstraint?.animator().constant = targetHeight
+            headerLeadingConstraint?.animator().constant = targetHeaderLeading
+            bodyMaskView.animator().alphaValue = targetAlpha
+            view.layoutSubtreeIfNeeded()
+        } completionHandler: { [weak self] in
+            guard let self else {
+                return
+            }
+
+            self.bodyMaskView.isHidden = !expanded
+            self.updateChromeGeometry()
+            self.view.window?.invalidateShadow()
+        }
     }
 
     @objc private func conversionInputChanged() {
@@ -173,17 +262,34 @@ final class IslandViewController: NSViewController {
     }
 
     private func buildUI() {
+        chromeView.translatesAutoresizingMaskIntoConstraints = false
         headerContainer.translatesAutoresizingMaskIntoConstraints = false
+        bodyPanel.translatesAutoresizingMaskIntoConstraints = false
         gapSpacer.translatesAutoresizingMaskIntoConstraints = false
+        bodyMaskView.translatesAutoresizingMaskIntoConstraints = false
+        bodyMaskView.wantsLayer = true
+        bodyMaskView.layer?.masksToBounds = true
+        bodyMaskView.alphaValue = 0
+        bodyMaskView.isHidden = true
 
+        view.addSubview(chromeView)
         view.addSubview(headerContainer)
-        view.addSubview(bodyPanel)
+        view.addSubview(bodyMaskView)
+
+        NSLayoutConstraint.activate([
+            chromeView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            chromeView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            chromeView.topAnchor.constraint(equalTo: view.topAnchor),
+            chromeView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
 
         headerWidthConstraint = headerContainer.widthAnchor.constraint(equalToConstant: layoutMetrics.headerWidth)
         headerHeightConstraint = headerContainer.heightAnchor.constraint(equalToConstant: layoutMetrics.headerHeight)
         bodyWidthConstraint = bodyPanel.widthAnchor.constraint(equalToConstant: layoutMetrics.bodyWidth)
         bodyHeightConstraint = bodyPanel.heightAnchor.constraint(equalToConstant: layoutMetrics.bodyHeight)
-        bodyTopConstraint = bodyPanel.topAnchor.constraint(equalTo: headerContainer.bottomAnchor, constant: layoutMetrics.bodyTopSpacing)
+        bodyTopConstraint = bodyMaskView.topAnchor.constraint(equalTo: headerContainer.bottomAnchor, constant: layoutMetrics.bodyTopSpacing)
+        bodyRevealWidthConstraint = bodyMaskView.widthAnchor.constraint(equalToConstant: collapsedBodyRevealWidth)
+        bodyRevealHeightConstraint = bodyMaskView.heightAnchor.constraint(equalToConstant: 0)
 
         headerLeadingConstraint = headerContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 0)
 
@@ -223,7 +329,16 @@ final class IslandViewController: NSViewController {
             trailingBubbleWidthConstraint!,
 
             bodyTopConstraint!,
-            bodyPanel.centerXAnchor.constraint(equalTo: gapSpacer.centerXAnchor),
+            bodyMaskView.centerXAnchor.constraint(equalTo: headerContainer.centerXAnchor),
+            bodyRevealWidthConstraint!,
+            bodyRevealHeightConstraint!
+        ])
+
+        bodyMaskView.addSubview(bodyPanel)
+
+        NSLayoutConstraint.activate([
+            bodyPanel.topAnchor.constraint(equalTo: bodyMaskView.topAnchor),
+            bodyPanel.centerXAnchor.constraint(equalTo: bodyMaskView.centerXAnchor),
             bodyWidthConstraint!,
             bodyHeightConstraint!
         ])
@@ -231,6 +346,11 @@ final class IslandViewController: NSViewController {
         buildLeadingBubbleContent()
         buildTrailingBubbleContent()
         buildBodyPanelContent()
+    }
+
+    private func updateChromeGeometry() {
+        chromeView.headerRect = headerContainer.frame
+        chromeView.bodyRect = bodyMaskView.isHidden ? .zero : bodyMaskView.frame
     }
 
     private func buildLeadingBubbleContent() {
@@ -383,7 +503,15 @@ final class AttachedBubbleView: NSView {
     }
 }
 
-final class NotchSurfaceView: NSView {
+final class IslandChromeView: NSView {
+    var headerRect: NSRect = .zero {
+        didSet { updateShape() }
+    }
+
+    var bodyRect: NSRect = .zero {
+        didSet { updateShape() }
+    }
+
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         translatesAutoresizingMaskIntoConstraints = false
@@ -401,7 +529,6 @@ final class NotchSurfaceView: NSView {
     }
 
     private func updateShape() {
-        let path = NSBezierPath.notchSurface(in: bounds, topCornerRadius: 6, bottomCornerRadius: 20)
         let shapeLayer: CAShapeLayer
 
         if let existing = layer as? CAShapeLayer {
@@ -411,14 +538,76 @@ final class NotchSurfaceView: NSView {
             layer = shapeLayer
         }
 
-        shapeLayer.path = path.cgPath
+        let path = NSBezierPath.islandChrome(headerRect: headerRect, bodyRect: bodyRect)
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        shapeLayer.path = path?.cgPath
         shapeLayer.fillColor = NSColor.black.cgColor
         shapeLayer.strokeColor = NSColor.white.withAlphaComponent(0.08).cgColor
         shapeLayer.lineWidth = 1
+        CATransaction.commit()
     }
 }
 
 private extension NSBezierPath {
+    static func islandChrome(headerRect: NSRect, bodyRect: NSRect) -> NSBezierPath? {
+        guard headerRect.width > 0, headerRect.height > 0 else {
+            return nil
+        }
+
+        guard bodyRect.width > 1, bodyRect.height > 1 else {
+            return notchSurface(in: headerRect, topCornerRadius: 6, bottomCornerRadius: 20)
+        }
+
+        let topR = min(CGFloat(6), headerRect.width / 4, headerRect.height / 4)
+        let bottomR = min(CGFloat(18), bodyRect.width / 4, bodyRect.height / 2)
+        let shoulderDepth = min(CGFloat(12), max(CGFloat(6), (headerRect.height - topR) * 0.38))
+        let leftCapEdgeX = headerRect.minX + topR
+        let rightCapEdgeX = headerRect.maxX - topR
+        let bodyTopY = bodyRect.maxY
+        let path = NSBezierPath()
+
+        path.move(to: NSPoint(x: headerRect.minX, y: headerRect.maxY))
+        path.curve(
+            to: NSPoint(x: leftCapEdgeX, y: headerRect.maxY - topR),
+            controlPoint1: NSPoint(x: headerRect.minX + topR * 0.55, y: headerRect.maxY),
+            controlPoint2: NSPoint(x: leftCapEdgeX, y: headerRect.maxY - topR * 0.55)
+        )
+        path.line(to: NSPoint(x: leftCapEdgeX, y: bodyTopY + shoulderDepth))
+        path.curve(
+            to: NSPoint(x: bodyRect.minX, y: bodyTopY),
+            controlPoint1: NSPoint(x: leftCapEdgeX, y: bodyTopY + shoulderDepth * 0.3),
+            controlPoint2: NSPoint(x: bodyRect.minX, y: bodyTopY + shoulderDepth * 0.2)
+        )
+        path.line(to: NSPoint(x: bodyRect.minX, y: bodyRect.minY + bottomR))
+        path.curve(
+            to: NSPoint(x: bodyRect.minX + bottomR, y: bodyRect.minY),
+            controlPoint1: NSPoint(x: bodyRect.minX, y: bodyRect.minY + bottomR * 0.45),
+            controlPoint2: NSPoint(x: bodyRect.minX + bottomR * 0.45, y: bodyRect.minY)
+        )
+        path.line(to: NSPoint(x: bodyRect.maxX - bottomR, y: bodyRect.minY))
+        path.curve(
+            to: NSPoint(x: bodyRect.maxX, y: bodyRect.minY + bottomR),
+            controlPoint1: NSPoint(x: bodyRect.maxX - bottomR * 0.45, y: bodyRect.minY),
+            controlPoint2: NSPoint(x: bodyRect.maxX, y: bodyRect.minY + bottomR * 0.45)
+        )
+        path.line(to: NSPoint(x: bodyRect.maxX, y: bodyTopY))
+        path.curve(
+            to: NSPoint(x: rightCapEdgeX, y: bodyTopY + shoulderDepth),
+            controlPoint1: NSPoint(x: bodyRect.maxX, y: bodyTopY + shoulderDepth * 0.2),
+            controlPoint2: NSPoint(x: rightCapEdgeX, y: bodyTopY + shoulderDepth * 0.3)
+        )
+        path.line(to: NSPoint(x: rightCapEdgeX, y: headerRect.maxY - topR))
+        path.curve(
+            to: NSPoint(x: headerRect.maxX, y: headerRect.maxY),
+            controlPoint1: NSPoint(x: rightCapEdgeX, y: headerRect.maxY - topR * 0.55),
+            controlPoint2: NSPoint(x: headerRect.maxX - topR * 0.55, y: headerRect.maxY)
+        )
+        path.close()
+        return path
+    }
+
     static func notchSurface(in rect: NSRect, topCornerRadius: CGFloat, bottomCornerRadius: CGFloat) -> NSBezierPath {
         let topR = min(topCornerRadius, rect.width / 4, rect.height / 4)
         let bottomR = min(bottomCornerRadius, rect.width / 4, rect.height / 2)
@@ -476,22 +665,5 @@ private extension NSBezierPath {
         }
 
         return path
-    }
-}
-
-final class RoundedPanelView: NSView {
-    override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
-        translatesAutoresizingMaskIntoConstraints = false
-        wantsLayer = true
-        layer?.backgroundColor = NSColor.black.cgColor
-        layer?.cornerRadius = 16
-        layer?.borderWidth = 1
-        layer?.borderColor = NSColor.white.withAlphaComponent(0.08).cgColor
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
     }
 }

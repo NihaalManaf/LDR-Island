@@ -4,12 +4,15 @@ final class IslandWindowController: NSWindowController {
     private let configuration: AppConfiguration
     private let islandViewController: IslandViewController
     private var isExpanded: Bool
+    private var usesExpandedWindowFrame: Bool
     private var collapseWorkItem: DispatchWorkItem?
+    private var collapseFrameWorkItem: DispatchWorkItem?
 
     init(configuration: AppConfiguration) {
         self.configuration = configuration
         self.islandViewController = IslandViewController(configuration: configuration)
         self.isExpanded = configuration.startsExpanded
+        self.usesExpandedWindowFrame = configuration.startsExpanded
 
         let panel = IslandPanel(contentViewController: islandViewController)
         super.init(window: panel)
@@ -25,8 +28,9 @@ final class IslandWindowController: NSWindowController {
             object: nil
         )
 
+        islandViewController.setWindowExpanded(usesExpandedWindowFrame)
         islandViewController.setExpanded(isExpanded)
-        applyWindowFrame(animated: false)
+        applyWindowFrame(expanded: usesExpandedWindowFrame, animated: false)
     }
 
     @available(*, unavailable)
@@ -37,44 +41,78 @@ final class IslandWindowController: NSWindowController {
     deinit {
         NotificationCenter.default.removeObserver(self)
         collapseWorkItem?.cancel()
+        collapseFrameWorkItem?.cancel()
     }
 
     func show() {
-        applyWindowFrame(animated: false)
+        applyWindowFrame(expanded: usesExpandedWindowFrame, animated: false)
         window?.orderFrontRegardless()
     }
 
     @objc private func screenParametersChanged() {
-        applyWindowFrame(animated: true)
+        applyWindowFrame(expanded: usesExpandedWindowFrame, animated: true)
     }
 
     private func handleHoverChanged(_ isHovering: Bool) {
         collapseWorkItem?.cancel()
 
         if isHovering {
-            setExpanded(true, animated: true)
+            setExpanded(true)
             return
         }
 
         let workItem = DispatchWorkItem { [weak self] in
-            self?.setExpanded(false, animated: true)
+            self?.setExpanded(false)
         }
 
         collapseWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: workItem)
     }
 
-    private func setExpanded(_ expanded: Bool, animated: Bool) {
+    private func setExpanded(_ expanded: Bool) {
+        collapseFrameWorkItem?.cancel()
+
         guard expanded != isExpanded else {
+            if expanded {
+                usesExpandedWindowFrame = true
+                islandViewController.setWindowExpanded(true)
+                applyWindowFrame(expanded: true, animated: false)
+            }
             return
         }
 
         isExpanded = expanded
-        islandViewController.setExpanded(expanded)
-        applyWindowFrame(animated: animated)
+
+        if expanded {
+            usesExpandedWindowFrame = true
+            islandViewController.setWindowExpanded(true)
+            applyWindowFrame(
+                expanded: true,
+                animated: true,
+                duration: islandViewController.openTransitionDuration,
+                timingFunction: islandViewController.preferredOpenTimingFunction
+            )
+            islandViewController.setExpanded(true, animated: true)
+            return
+        }
+
+        usesExpandedWindowFrame = false
+        islandViewController.setWindowExpanded(false)
+        applyWindowFrame(
+            expanded: false,
+            animated: true,
+            duration: islandViewController.closeTransitionDuration,
+            timingFunction: islandViewController.preferredCloseTimingFunction
+        )
+        islandViewController.setExpanded(false, animated: true)
     }
 
-    private func applyWindowFrame(animated: Bool) {
+    private func applyWindowFrame(
+        expanded: Bool,
+        animated: Bool,
+        duration: TimeInterval = 0.18,
+        timingFunction: CAMediaTimingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+    ) {
         guard let window else {
             return
         }
@@ -82,13 +120,13 @@ final class IslandWindowController: NSWindowController {
         let metrics = ScreenLocator.preferredLayoutMetrics()
         islandViewController.updateLayoutMetrics(metrics)
 
-        let targetSize = isExpanded
+        let targetSize = expanded
             ? islandViewController.preferredExpandedSize
             : islandViewController.preferredCollapsedSize
 
         let targetFrame = ScreenLocator.islandFrame(
             for: targetSize,
-            gapCenterInWindow: metrics.gapCenterInWindow(expanded: isExpanded)
+            gapCenterInWindow: metrics.gapCenterInWindow(expanded: expanded)
         )
 
         guard animated else {
@@ -97,8 +135,8 @@ final class IslandWindowController: NSWindowController {
         }
 
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.18
-            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            context.duration = duration
+            context.timingFunction = timingFunction
             window.animator().setFrame(targetFrame, display: true)
         }
     }

@@ -19,12 +19,16 @@ struct IslandLayoutMetrics: Equatable {
         leadingBubbleWidth + notchGapWidth / 2
     }
 
+    var headerCenterFromHeaderLeading: CGFloat {
+        headerWidth / 2
+    }
+
     var expandedLeftPadding: CGFloat {
-        max(0, bodyWidth / 2 - gapCenterFromHeaderLeading)
+        max(0, bodyWidth / 2 - headerCenterFromHeaderLeading)
     }
 
     var expandedRightPadding: CGFloat {
-        max(0, bodyWidth / 2 - (trailingBubbleWidth + notchGapWidth / 2))
+        max(0, bodyWidth / 2 - (headerWidth - headerCenterFromHeaderLeading))
     }
 
     var collapsedSize: NSSize {
@@ -70,15 +74,20 @@ enum ScreenLocator {
             hasHardwareNotch = false
         }
 
+        let leadingBubbleWidth: CGFloat = 148
+        let trailingBubbleWidth: CGFloat = 64
+        let closedHeaderWidth = leadingBubbleWidth + gapWidth + trailingBubbleWidth
+        let bodyWidth = hasHardwareNotch ? closedHeaderWidth : max(404, closedHeaderWidth)
+
         return IslandLayoutMetrics(
             hasHardwareNotch: hasHardwareNotch,
             notchGapWidth: gapWidth,
             headerHeight: headerHeight,
-            leadingBubbleWidth: 148,
-            trailingBubbleWidth: 64,
-            bodyWidth: 320,
+            leadingBubbleWidth: leadingBubbleWidth,
+            trailingBubbleWidth: trailingBubbleWidth,
+            bodyWidth: bodyWidth,
             bodyHeight: 192,
-            bodyTopSpacing: 8
+            bodyTopSpacing: 0
         )
     }
 
@@ -118,7 +127,7 @@ enum ScreenLocator {
 
         let leftPadding = screen.auxiliaryTopLeftArea?.width ?? 0
         let rightPadding = screen.auxiliaryTopRightArea?.width ?? 0
-        let notchWidth = screen.frame.width - leftPadding - rightPadding + 4
+        let notchWidth = screen.frame.width - leftPadding - rightPadding
 
         guard notchWidth > 0 else {
             return nil
