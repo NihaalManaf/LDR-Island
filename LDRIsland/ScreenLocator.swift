@@ -77,7 +77,10 @@ enum ScreenLocator {
         let leadingBubbleWidth: CGFloat = 148
         let trailingBubbleWidth: CGFloat = 64
         let closedHeaderWidth = leadingBubbleWidth + gapWidth + trailingBubbleWidth
-        let bodyWidth = hasHardwareNotch ? closedHeaderWidth : max(404, closedHeaderWidth)
+        let notchExtensionInset: CGFloat = 12
+        let bodyWidth = hasHardwareNotch
+            ? max(320, closedHeaderWidth - notchExtensionInset)
+            : max(404, closedHeaderWidth)
 
         return IslandLayoutMetrics(
             hasHardwareNotch: hasHardwareNotch,
