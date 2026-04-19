@@ -1,0 +1,389 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA000001 = {isa = PBXBuildFile; fileRef = AB000001 /* AppDelegate.swift */; };
+		AA000002 = {isa = PBXBuildFile; fileRef = AB000002 /* AppConfiguration.swift */; };
+		AA000003 = {isa = PBXBuildFile; fileRef = AB000003 /* AppMenuBuilder.swift */; };
+		AA000004 = {isa = PBXBuildFile; fileRef = AB000004 /* IslandPanel.swift */; };
+		AA000005 = {isa = PBXBuildFile; fileRef = AB000005 /* IslandViewController.swift */; };
+		AA000006 = {isa = PBXBuildFile; fileRef = AB000006 /* IslandWindowController.swift */; };
+		AA000007 = {isa = PBXBuildFile; fileRef = AB000007 /* PixelAvatarView.swift */; };
+		AA000008 = {isa = PBXBuildFile; fileRef = AB000008 /* ScreenLocator.swift */; };
+		AA000009 = {isa = PBXBuildFile; fileRef = AB000009 /* TimeConversionService.swift */; };
+		AA00000A = {isa = PBXBuildFile; fileRef = AB00000A /* main.swift */; };
+		AA00000B = {isa = PBXBuildFile; fileRef = AB00000D /* Cocoa.framework */; };
+		AA00000C = {isa = PBXBuildFile; fileRef = AB00000C /* TimeConversionServiceTests.swift */; };
+		AA00000D = {isa = PBXBuildFile; fileRef = AB00000E /* XCTest.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B2000001 = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B1000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B0000001;
+			remoteInfo = LDRIsland;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		AB000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		AB000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
+		AB000003 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMenuBuilder.swift; sourceTree = "<group>"; };
+		AB000004 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandPanel.swift; sourceTree = "<group>"; };
+		AB000005 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandViewController.swift; sourceTree = "<group>"; };
+		AB000006 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslandWindowController.swift; sourceTree = "<group>"; };
+		AB000007 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixelAvatarView.swift; sourceTree = "<group>"; };
+		AB000008 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenLocator.swift; sourceTree = "<group>"; };
+		AB000009 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeConversionService.swift; sourceTree = "<group>"; };
+		AB00000A = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		AB00000B = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AB00000C = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeConversionServiceTests.swift; sourceTree = "<group>"; };
+		AB00000D = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		AB00000E = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
+		AB00000F = {isa = PBXFileReference; explicitFileType = wrapper.application; path = LDRIsland.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB000010 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = LDRIslandTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AD000001 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA00000B /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AD000002 = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA00000D /* XCTest.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AC000001 = {
+			isa = PBXGroup;
+			children = (
+				AC000002 /* LDRIsland */,
+				AC000003 /* LDRIslandTests */,
+				AC000004 /* Frameworks */,
+				AC000005 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AC000002 = {
+			isa = PBXGroup;
+			children = (
+				AB000001 /* AppDelegate.swift */,
+				AB000002 /* AppConfiguration.swift */,
+				AB000003 /* AppMenuBuilder.swift */,
+				AB000004 /* IslandPanel.swift */,
+				AB000005 /* IslandViewController.swift */,
+				AB000006 /* IslandWindowController.swift */,
+				AB000007 /* PixelAvatarView.swift */,
+				AB000008 /* ScreenLocator.swift */,
+				AB000009 /* TimeConversionService.swift */,
+				AB00000A /* main.swift */,
+				AB00000B /* Info.plist */,
+			);
+			path = LDRIsland;
+			sourceTree = "<group>";
+		};
+		AC000003 = {
+			isa = PBXGroup;
+			children = (
+				AB00000C /* TimeConversionServiceTests.swift */,
+			);
+			path = LDRIslandTests;
+			sourceTree = "<group>";
+		};
+		AC000004 = {
+			isa = PBXGroup;
+			children = (
+				AB00000D /* Cocoa.framework */,
+				AB00000E /* XCTest.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		AC000005 = {
+			isa = PBXGroup;
+			children = (
+				AB00000F /* LDRIsland.app */,
+				AB000010 /* LDRIslandTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		B0000001 = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D1000001 /* Build configuration list for PBXNativeTarget "LDRIsland" */;
+			buildPhases = (
+				AF000001 /* Sources */,
+				AD000001 /* Frameworks */,
+				AE000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = LDRIsland;
+			productName = LDRIsland;
+			productReference = AB00000F /* LDRIsland.app */;
+			productType = "com.apple.product-type.application";
+		};
+		B0000002 = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D2000001 /* Build configuration list for PBXNativeTarget "LDRIslandTests" */;
+			buildPhases = (
+				AF000002 /* Sources */,
+				AD000002 /* Frameworks */,
+				AE000002 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B3000001 /* PBXTargetDependency */,
+			);
+			name = LDRIslandTests;
+			productName = LDRIslandTests;
+			productReference = AB000010 /* LDRIslandTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		B1000001 = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					B0000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					B0000002 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = B0000001;
+					};
+				};
+			};
+			buildConfigurationList = D0000001 /* Build configuration list for PBXProject "LDRIsland" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AC000001;
+			productRefGroup = AC000005 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B0000001 /* LDRIsland */,
+				B0000002 /* LDRIslandTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AE000001 = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AE000002 = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AF000001 = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA000001 /* AppDelegate.swift in Sources */,
+				AA000002 /* AppConfiguration.swift in Sources */,
+				AA000003 /* AppMenuBuilder.swift in Sources */,
+				AA000004 /* IslandPanel.swift in Sources */,
+				AA000005 /* IslandViewController.swift in Sources */,
+				AA000006 /* IslandWindowController.swift in Sources */,
+				AA000007 /* PixelAvatarView.swift in Sources */,
+				AA000008 /* ScreenLocator.swift in Sources */,
+				AA000009 /* TimeConversionService.swift in Sources */,
+				AA00000A /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AF000002 = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA00000C /* TimeConversionServiceTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B3000001 = {
+			isa = PBXTargetDependency;
+			target = B0000001 /* LDRIsland */;
+			targetProxy = B2000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		C0000001 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		C0000002 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		C1000001 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				ENABLE_TESTABILITY = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LDRIsland/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nihaalmanaf.LDRIsland;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		C1000002 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LDRIsland/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nihaalmanaf.LDRIsland;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		C2000001 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nihaalmanaf.LDRIslandTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = LDRIsland;
+			};
+			name = Debug;
+		};
+		C2000002 = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nihaalmanaf.LDRIslandTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = LDRIsland;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D0000001 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C0000001 /* Debug */,
+				C0000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D1000001 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C1000001 /* Debug */,
+				C1000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D2000001 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C2000001 /* Debug */,
+				C2000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = B1000001 /* Project object */;
+}
