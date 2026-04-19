@@ -62,7 +62,15 @@ final class IslandWindowController: NSWindowController {
         }
 
         let workItem = DispatchWorkItem { [weak self] in
-            self?.setExpanded(false)
+            guard let self else {
+                return
+            }
+
+            if self.isMouseInsideWindow() {
+                return
+            }
+
+            self.setExpanded(false)
         }
 
         collapseWorkItem = workItem
@@ -105,6 +113,15 @@ final class IslandWindowController: NSWindowController {
             timingFunction: islandViewController.preferredCloseTimingFunction
         )
         islandViewController.setExpanded(false, animated: true)
+    }
+
+    private func isMouseInsideWindow() -> Bool {
+        guard let window else {
+            return false
+        }
+
+        let mouseLocation = NSEvent.mouseLocation
+        return window.frame.contains(mouseLocation)
     }
 
     private func applyWindowFrame(

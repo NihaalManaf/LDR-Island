@@ -4,6 +4,8 @@ final class PixelAvatarView: NSView {
     private let avatarStyle: AvatarStyle
     private var isBlinking = false
     private var blinkTimer: Timer?
+    private var armsUp = false
+    private var waveTimer: Timer?
 
     init(style: AvatarStyle) {
         self.avatarStyle = style
@@ -50,12 +52,26 @@ final class PixelAvatarView: NSView {
         layer?.add(bob, forKey: "bob")
 
         scheduleBlink()
+        startWave()
     }
 
     private func stopAnimations() {
         layer?.removeAllAnimations()
         blinkTimer?.invalidate()
         blinkTimer = nil
+        waveTimer?.invalidate()
+        waveTimer = nil
+    }
+
+    private func startWave() {
+        waveTimer?.invalidate()
+        let timer = Timer(timeInterval: 0.55, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            self.armsUp.toggle()
+            self.needsDisplay = true
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        waveTimer = timer
     }
 
     private func scheduleBlink() {
@@ -114,7 +130,9 @@ final class PixelAvatarView: NSView {
     private func currentPattern() -> [String] {
         switch avatarStyle {
         case .woman:
-            return isBlinking ? womanPatternBlink : womanPattern
+            let head = isBlinking ? womanHeadBlink : womanHeadOpen
+            let body = armsUp ? womanBodyUp : womanBodyDown
+            return head + body
         case .man:
             return isBlinking ? manPatternBlink : manPattern
         }
@@ -145,7 +163,7 @@ final class PixelAvatarView: NSView {
         }
     }
 
-    private let womanPattern = [
+    private let womanHeadOpen = [
         "....HHHHH....",
         "...HHHHHHH...",
         "..HHhhhhhHH..",
@@ -155,15 +173,10 @@ final class PixelAvatarView: NSView {
         "HHSSSSSSSSSHH",
         "HHSRSMMMSRSHH",
         ".HHSSSSSSSHH.",
-        "..HHSSSSSHH..",
-        "....PPPPP....",
-        "...PPPPPPP...",
-        "..PPPPPPPPP..",
-        "..PPP...PPP..",
-        "..PP.....PP.."
+        "..HHSSSSSHH.."
     ]
 
-    private let womanPatternBlink = [
+    private let womanHeadBlink = [
         "....HHHHH....",
         "...HHHHHHH...",
         "..HHhhhhhHH..",
@@ -173,9 +186,22 @@ final class PixelAvatarView: NSView {
         "HHSSSSSSSSSHH",
         "HHSRSMMMSRSHH",
         ".HHSSSSSSSHH.",
-        "..HHSSSSSHH..",
+        "..HHSSSSSHH.."
+    ]
+
+    private let womanBodyDown = [
         "....PPPPP....",
-        "...PPPPPPP...",
+        "..SPPPPPPPS..",
+        ".SSPPPPPPPSS.",
+        "..PPPPPPPPP..",
+        "..PPP...PPP..",
+        "..PP.....PP.."
+    ]
+
+    private let womanBodyUp = [
+        "....PPPPP....",
+        ".SSPPPPPPPSS.",
+        "..SPPPPPPPS..",
         "..PPPPPPPPP..",
         "..PPP...PPP..",
         "..PP.....PP.."
