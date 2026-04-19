@@ -1,0 +1,46 @@
+name: Release DMG
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-dmg:
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Build DMG
+        run: |
+          chmod +x scripts/build-dmg.sh
+          VERSION="${GITHUB_REF_NAME#v}" ./scripts/build-dmg.sh
+
+      - name: Find DMG path
+        id: dmg
+        run: |
+          DMG_PATH=$(find build/dmg -name '*.dmg' -print -quit)
+          echo "path=$DMG_PATH" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$DMG_PATH")" >> "$GITHUB_OUTPUT"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.dmg.outputs.name }}
+          path: ${{ steps.dmg.outputs.path }}
+
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.dmg.outputs.path }}
+          generate_release_notes: true

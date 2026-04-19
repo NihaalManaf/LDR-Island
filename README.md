@@ -86,6 +86,31 @@ Core files:
 - `LDRIsland/TimeConversionService.swift`
 - `LDRIsland/AppConfiguration.swift`
 
+## Download
+
+### For regular users
+Once a release DMG is published, download it from the **Releases** page:
+
+- `https://github.com/NihaalManaf/LDR-Island/releases`
+
+Then:
+1. download the latest `.dmg`
+2. open it
+3. drag `LDRIsland.app` into `Applications`
+4. launch the app
+
+> Note: until the app is signed and notarized with an Apple Developer account,
+> macOS may show a warning the first time you open it.
+
+### For developers
+If you want to run from source instead, clone the repo:
+
+```bash
+git clone https://github.com/NihaalManaf/LDR-Island.git
+cd LDR-Island
+open LDRIsland.xcodeproj
+```
+
 ## Run locally
 
 ### Requirements
@@ -104,6 +129,38 @@ xcodebuild build \
   -scheme LDRIsland \
   -project LDRIsland.xcodeproj \
   -destination 'platform=macOS'
+```
+
+## Create a DMG locally
+
+To build a distributable DMG on your Mac:
+
+```bash
+chmod +x scripts/build-dmg.sh
+./scripts/build-dmg.sh
+```
+
+Output:
+- `build/dmg/LDR-Island-<version>.dmg`
+
+The DMG includes:
+- `LDRIsland.app`
+- an `Applications` shortcut for drag-and-drop install
+
+## GitHub Releases
+
+This repo includes a GitHub Actions workflow:
+- `.github/workflows/release-dmg.yml`
+
+It will:
+- build the app on macOS
+- create a DMG
+- upload it as a workflow artifact
+- attach it to a GitHub Release when you push a tag like:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
 ```
 
 ## Configuration
