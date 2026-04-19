@@ -4,7 +4,7 @@ import QuartzCore
 final class IslandViewController: NSViewController {
     var onHoverChanged: ((Bool) -> Void)?
 
-    private let configuration: AppConfiguration
+    private var configuration: AppConfiguration
     private let timeService: TimeConversionService
     private var clockTimer: Timer?
     private var layoutMetrics = ScreenLocator.preferredLayoutMetrics()
@@ -45,7 +45,8 @@ final class IslandViewController: NSViewController {
 
     private lazy var avatarView = PixelAvatarView(style: configuration.partner.avatar)
     private let partnerCaptionLabel = IslandViewController.makeLabel(fontSize: 10, weight: .bold, color: .secondaryLabelColor)
-    private let partnerTimeLabel = IslandViewController.makeMonospacedLabel(fontSize: 22, weight: .semibold)
+    private let partnerTimeLabel = IslandViewController.makeMonospacedLabel(fontSize: 18, weight: .semibold)
+    private let compactPartnerZoneLabel = IslandViewController.makeLabel(fontSize: 11, weight: .semibold, color: .secondaryLabelColor)
     private let partnerMetaLabel = IslandViewController.makeLabel(fontSize: 11, weight: .medium, color: .secondaryLabelColor)
     private let offsetLabel = IslandViewController.makeLabel(fontSize: 11, weight: .bold, color: .systemBlue)
 
@@ -54,8 +55,19 @@ final class IslandViewController: NSViewController {
     private let localDragTimeLabel = IslandViewController.makeMonospacedLabel(fontSize: 28, weight: .bold)
     private let partnerDragTimeLabel = IslandViewController.makeMonospacedLabel(fontSize: 28, weight: .bold)
     private let conversionMetaLabel = IslandViewController.makeLabel(fontSize: 12, weight: .semibold, color: .secondaryLabelColor)
-    private let dragHintLabel = IslandViewController.makeLabel(fontSize: 11, weight: .medium, color: .tertiaryLabelColor)
+    private let reunionCountdownLabel = IslandViewController.makeLabel(fontSize: 12, weight: .semibold, color: .systemPink)
     private let timelineView = TimeScrubberView()
+    private lazy var settingsButton: NSButton = {
+        let button = NSButton()
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.isBordered = false
+        button.image = NSImage(systemSymbolName: "gearshape.fill", accessibilityDescription: "Settings")
+        button.contentTintColor = .secondaryLabelColor
+        button.target = self
+        button.action = #selector(openSettings)
+        return button
+    }()
+    private lazy var settingsWindowController = SettingsWindowController.shared
     private var selectedLocalMinutesFromMidnight: Int?
 
     init(configuration: AppConfiguration, timeService: TimeConversionService = TimeConversionService()) {
@@ -71,6 +83,7 @@ final class IslandViewController: NSViewController {
 
     deinit {
         clockTimer?.invalidate()
+        NotificationCenter.default.removeObserver(self)
     }
 
     var preferredCollapsedSize: NSSize {
@@ -113,6 +126,12 @@ final class IslandViewController: NSViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(settingsDidChange),
+            name: AppSettingsStore.didChangeNotification,
+            object: nil
+        )
         buildUI()
         updateLayoutMetrics(layoutMetrics)
         setWindowExpanded(configuration.startsExpanded)
@@ -199,6 +218,16 @@ final class IslandViewController: NSViewController {
         refreshConversion(referenceDate: Date())
     }
 
+    @objc private func settingsDidChange() {
+        configuration = AppConfiguration.current
+        avatarView.avatarStyle = configuration.partner.avatar
+        refreshAll(referenceDate: Date())
+    }
+
+    @objc private func openSettings() {
+        settingsWindowController.show(configuration: configuration)
+    }
+
     private func startClockTimer() {
         clockTimer?.invalidate()
 
@@ -219,6 +248,7 @@ final class IslandViewController: NSViewController {
 
         partnerCaptionLabel.stringValue = configuration.partner.name.uppercased()
         partnerTimeLabel.stringValue = snapshot.partner.timeText
+        compactPartnerZoneLabel.stringValue = snapshot.partner.zoneText
         partnerMetaLabel.stringValue = "\(snapshot.partner.dayText) • \(snapshot.partner.zoneText)"
         offsetLabel.stringValue = snapshot.offsetText
 
@@ -250,21 +280,24 @@ final class IslandViewController: NSViewController {
             timeZone: configuration.local.resolvedTimeZone
         )
         partnerDragTimeLabel.stringValue = result.targetTimeText
+        let partnerPossessive = configuration.partner.name
         let relativeDayText: String
         switch result.shift {
         case .sameDay:
-            relativeDayText = "Her time is the same day"
+            relativeDayText = "\(partnerPossessive)'s time is the same day"
         case .nextDay:
-            relativeDayText = "Her time is the next day"
+            relativeDayText = "\(partnerPossessive)'s time is the next day"
         case .previousDay:
-            relativeDayText = "Her time is the previous day"
+            relativeDayText = "\(partnerPossessive)'s time is the previous day"
         case .days(let offset) where offset > 0:
-            relativeDayText = "Her time is \(offset) days later"
+            relativeDayText = "\(partnerPossessive)'s time is \(offset) days later"
         case .days(let offset):
-            relativeDayText = "Her time is \(abs(offset)) days earlier"
+            relativeDayText = "\(partnerPossessive)'s time is \(abs(offset)) days earlier"
         }
 
         conversionMetaLabel.stringValue = "\(relativeDayText) • \(result.targetDayText) • \(result.targetZoneText)"
+        reunionCountdownLabel.stringValue = reunionCountdownText(referenceDate: referenceDate)
+        reunionCountdownLabel.isHidden = reunionCountdownLabel.stringValue.isEmpty
         timelineView.minutesFromMidnight = localMinutes
     }
 
@@ -362,14 +395,28 @@ final class IslandViewController: NSViewController {
 
     private func buildLeadingBubbleContent() {
         partnerTimeLabel.alignment = .left
-        leadingBubble.addSubview(partnerTimeLabel)
+        compactPartnerZoneLabel.alignment = .left
+
+        let row = NSStackView()
+        row.translatesAutoresizingMaskIntoConstraints = false
+        row.orientation = .horizontal
+        row.alignment = .centerY
+        row.spacing = 6
+
+        row.addArrangedSubview(partnerTimeLabel)
+        row.addArrangedSubview(compactPartnerZoneLabel)
+        leadingBubble.addSubview(row)
+
+        compactPartnerZoneLabel.setContentHuggingPriority(.required, for: .horizontal)
+        compactPartnerZoneLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+        partnerTimeLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         NSLayoutConstraint.activate([
-            partnerTimeLabel.leadingAnchor.constraint(equalTo: leadingBubble.leadingAnchor, constant: 18),
-            partnerTimeLabel.trailingAnchor.constraint(lessThanOrEqualTo: leadingBubble.trailingAnchor, constant: -14),
-            partnerTimeLabel.topAnchor.constraint(greaterThanOrEqualTo: leadingBubble.topAnchor, constant: 4),
-            partnerTimeLabel.bottomAnchor.constraint(lessThanOrEqualTo: leadingBubble.bottomAnchor, constant: -4),
-            partnerTimeLabel.centerYAnchor.constraint(equalTo: leadingBubble.centerYAnchor)
+            row.leadingAnchor.constraint(equalTo: leadingBubble.leadingAnchor, constant: 18),
+            row.trailingAnchor.constraint(lessThanOrEqualTo: leadingBubble.trailingAnchor, constant: -12),
+            row.topAnchor.constraint(greaterThanOrEqualTo: leadingBubble.topAnchor, constant: 4),
+            row.bottomAnchor.constraint(lessThanOrEqualTo: leadingBubble.bottomAnchor, constant: -4),
+            row.centerYAnchor.constraint(equalTo: leadingBubble.centerYAnchor)
         ])
     }
 
@@ -389,7 +436,7 @@ final class IslandViewController: NSViewController {
         mainStack.translatesAutoresizingMaskIntoConstraints = false
         mainStack.orientation = .vertical
         mainStack.spacing = 14
-        mainStack.edgeInsets = NSEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+        mainStack.edgeInsets = NSEdgeInsets(top: 16, left: 16, bottom: 10, right: 16)
 
         bodyPanel.addSubview(mainStack)
 
@@ -404,18 +451,18 @@ final class IslandViewController: NSViewController {
         topRow.orientation = .horizontal
         topRow.alignment = .top
         topRow.distribution = .fillEqually
-        topRow.spacing = 14
+        topRow.spacing = 18
 
         let localColumn = NSStackView()
         localColumn.orientation = .vertical
-        localColumn.spacing = 6
+        localColumn.spacing = 8
         localDragTimeLabel.alignment = .left
         localColumn.addArrangedSubview(localConverterCaptionLabel)
         localColumn.addArrangedSubview(localDragTimeLabel)
 
         let partnerColumn = NSStackView()
         partnerColumn.orientation = .vertical
-        partnerColumn.spacing = 6
+        partnerColumn.spacing = 8
         partnerDragTimeLabel.alignment = .right
         partnerConverterCaptionLabel.alignment = .right
         partnerColumn.addArrangedSubview(partnerConverterCaptionLabel)
@@ -424,7 +471,7 @@ final class IslandViewController: NSViewController {
         topRow.addArrangedSubview(localColumn)
         topRow.addArrangedSubview(partnerColumn)
 
-        let arrowLabel = IslandViewController.makeLabel(fontSize: 16, weight: .bold, color: .secondaryLabelColor)
+        let arrowLabel = IslandViewController.makeLabel(fontSize: 15, weight: .bold, color: .secondaryLabelColor)
         arrowLabel.alignment = .center
         arrowLabel.stringValue = "YOUR TIME → HER TIME"
 
@@ -438,11 +485,52 @@ final class IslandViewController: NSViewController {
         conversionMetaLabel.alignment = .center
         conversionMetaLabel.maximumNumberOfLines = 2
         conversionMetaLabel.lineBreakMode = .byWordWrapping
+        reunionCountdownLabel.alignment = .left
+        reunionCountdownLabel.maximumNumberOfLines = 1
+
+        let footerRow = NSStackView()
+        footerRow.orientation = .horizontal
+        footerRow.alignment = .centerY
+        footerRow.distribution = .fill
+        footerRow.spacing = 12
+        footerRow.setContentHuggingPriority(.required, for: .vertical)
+
+        let spacer = NSView()
+        spacer.translatesAutoresizingMaskIntoConstraints = false
+        spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        reunionCountdownLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        settingsButton.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+        footerRow.addArrangedSubview(reunionCountdownLabel)
+        footerRow.addArrangedSubview(spacer)
+        footerRow.addArrangedSubview(settingsButton)
 
         mainStack.addArrangedSubview(topRow)
         mainStack.addArrangedSubview(arrowLabel)
         mainStack.addArrangedSubview(timelineView)
         mainStack.addArrangedSubview(conversionMetaLabel)
+        mainStack.addArrangedSubview(footerRow)
+    }
+
+    private func reunionCountdownText(referenceDate: Date) -> String {
+        guard configuration.showsReunionCountdown, let reunionDate = configuration.reunionDate else {
+            return ""
+        }
+
+        let start = Calendar.autoupdatingCurrent.startOfDay(for: referenceDate)
+        let end = Calendar.autoupdatingCurrent.startOfDay(for: reunionDate)
+        let days = Calendar.autoupdatingCurrent.dateComponents([.day], from: start, to: end).day ?? 0
+
+        switch days {
+        case ..<0:
+            return "Reunion date passed"
+        case 0:
+            return "Seeing them today ♡"
+        case 1:
+            return "1 day until reunion ♡"
+        default:
+            return "\(days) days until reunion ♡"
+        }
     }
 
     private func calendar(for timeZone: TimeZone) -> Calendar {
@@ -484,6 +572,272 @@ final class IslandViewController: NSViewController {
         label.lineBreakMode = .byTruncatingTail
         label.maximumNumberOfLines = 1
         return label
+    }
+}
+
+final class SettingsWindowController: NSWindowController {
+    static let shared = SettingsWindowController()
+
+    private let settingsViewController = SettingsWindowContentViewController()
+
+    init() {
+        let window = NSWindow(contentViewController: settingsViewController)
+        window.title = "LDR Settings"
+        window.styleMask = [.titled, .closable, .miniaturizable]
+        window.titleVisibility = .visible
+        window.toolbarStyle = .preference
+        window.isReleasedWhenClosed = false
+        window.setContentSize(NSSize(width: 460, height: 360))
+        window.setFrameAutosaveName("LDRSettingsWindow")
+        super.init(window: window)
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(settingsDidChange),
+            name: AppSettingsStore.didChangeNotification,
+            object: nil
+        )
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    func show(configuration: AppConfiguration) {
+        settingsViewController.apply(configuration: configuration)
+        showWindow(nil)
+        window?.center()
+        window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    @objc private func settingsDidChange() {
+        settingsViewController.apply(configuration: AppConfiguration.current)
+    }
+}
+
+final class SettingsWindowContentViewController: NSViewController {
+    private let tabView = NSTabView()
+    private let roleControl = NSPopUpButton()
+    private let avatarControl = NSPopUpButton()
+    private let localTimeZoneControl = NSPopUpButton()
+    private let partnerTimeZoneControl = NSPopUpButton()
+    private let showReunionToggle = NSButton(checkboxWithTitle: "Show reunion countdown in the notch extension", target: nil, action: nil)
+    private let reunionPicker = NSDatePicker()
+    private var didBuildUI = false
+
+    override func loadView() {
+        view = NSView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        buildUI()
+        apply(configuration: AppConfiguration.current)
+    }
+
+    func apply(configuration: AppConfiguration) {
+        guard didBuildUI else { return }
+
+        roleControl.selectItem(withTitle: configuration.relationshipRole.displayName)
+        avatarControl.selectItem(withTitle: configuration.partner.avatar.displayName)
+
+        if let localID = configuration.local.timeZoneIdentifier {
+            localTimeZoneControl.selectItem(withTitle: localID)
+        } else {
+            localTimeZoneControl.selectItem(at: 0)
+        }
+
+        partnerTimeZoneControl.selectItem(withTitle: configuration.partner.timeZoneIdentifier ?? "UTC")
+        showReunionToggle.state = configuration.showsReunionCountdown ? .on : .off
+        reunionPicker.dateValue = configuration.reunionDate ?? Date()
+        updateReunionControls()
+    }
+
+    private func buildUI() {
+        guard !didBuildUI else { return }
+        didBuildUI = true
+
+        let rootStack = NSStackView()
+        rootStack.translatesAutoresizingMaskIntoConstraints = false
+        rootStack.orientation = .vertical
+        rootStack.spacing = 14
+        rootStack.edgeInsets = NSEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+        view.addSubview(rootStack)
+
+        NSLayoutConstraint.activate([
+            rootStack.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            rootStack.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            rootStack.topAnchor.constraint(equalTo: view.topAnchor),
+            rootStack.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            view.widthAnchor.constraint(equalToConstant: 460),
+            view.heightAnchor.constraint(equalToConstant: 360)
+        ])
+
+        roleControl.addItems(withTitles: RelationshipRole.allCases.map(\.displayName))
+        roleControl.target = self
+        roleControl.action = #selector(roleChanged)
+
+        avatarControl.addItems(withTitles: AvatarStyle.allCases.map(\.displayName))
+
+        let timeZoneTitles = TimeZone.knownTimeZoneIdentifiers
+        localTimeZoneControl.addItems(withTitles: ["Current System Time Zone"] + timeZoneTitles)
+        partnerTimeZoneControl.addItems(withTitles: timeZoneTitles)
+
+        reunionPicker.datePickerElements = [.yearMonthDay]
+        reunionPicker.datePickerStyle = .textFieldAndStepper
+        reunionPicker.datePickerMode = .single
+        showReunionToggle.target = self
+        showReunionToggle.action = #selector(reunionVisibilityChanged)
+
+        tabView.translatesAutoresizingMaskIntoConstraints = false
+        tabView.tabViewType = .topTabsBezelBorder
+        tabView.addTabViewItem(makePeopleTab())
+        tabView.addTabViewItem(makeTimeZonesTab())
+        tabView.addTabViewItem(makeReunionTab())
+
+        let cancelButton = NSButton(title: "Cancel", target: self, action: #selector(cancel))
+        cancelButton.keyEquivalent = "\u{1b}"
+        let saveButton = NSButton(title: "Save", target: self, action: #selector(saveSettings))
+        saveButton.bezelStyle = .rounded
+        saveButton.keyEquivalent = "\r"
+
+        let buttonRow = NSStackView(views: [NSView(), cancelButton, saveButton])
+        buttonRow.orientation = .horizontal
+        buttonRow.alignment = .centerY
+        buttonRow.spacing = 8
+
+        rootStack.addArrangedSubview(tabView)
+        rootStack.addArrangedSubview(buttonRow)
+        tabView.heightAnchor.constraint(equalToConstant: 280).isActive = true
+    }
+
+    private func makePeopleTab() -> NSTabViewItem {
+        let item = NSTabViewItem(identifier: "people")
+        item.label = "People"
+        item.view = sectionView(
+            title: "Relationship",
+            subtitle: "Choose who you are and which partner avatar appears in the top-right corner.",
+            rows: [
+                labeledRow(title: "I am", control: roleControl),
+                labeledRow(title: "Top-right avatar", control: avatarControl)
+            ]
+        )
+        return item
+    }
+
+    private func makeTimeZonesTab() -> NSTabViewItem {
+        let item = NSTabViewItem(identifier: "timeZones")
+        item.label = "Time Zones"
+        item.view = sectionView(
+            title: "Time Zones",
+            subtitle: "Pick your local time zone and your partner's time zone for the notch extension.",
+            rows: [
+                labeledRow(title: "My time zone", control: localTimeZoneControl),
+                labeledRow(title: "Their time zone", control: partnerTimeZoneControl)
+            ]
+        )
+        return item
+    }
+
+    private func makeReunionTab() -> NSTabViewItem {
+        let item = NSTabViewItem(identifier: "reunion")
+        item.label = "Reunion"
+        item.view = sectionView(
+            title: "Reunion Countdown",
+            subtitle: "Show or hide the reunion countdown inside the expanded notch extension.",
+            rows: [
+                showReunionToggle,
+                labeledRow(title: "Reunion date", control: reunionPicker)
+            ]
+        )
+        return item
+    }
+
+    private func sectionView(title: String, subtitle: String, rows: [NSView]) -> NSView {
+        let container = NSView()
+        container.translatesAutoresizingMaskIntoConstraints = false
+
+        let titleLabel = NSTextField(labelWithString: title)
+        titleLabel.font = .systemFont(ofSize: 20, weight: .semibold)
+
+        let subtitleLabel = NSTextField(wrappingLabelWithString: subtitle)
+        subtitleLabel.font = .systemFont(ofSize: 12)
+        subtitleLabel.textColor = .secondaryLabelColor
+
+        let stack = NSStackView()
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        stack.orientation = .vertical
+        stack.spacing = 14
+
+        container.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 8),
+            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -8),
+            stack.topAnchor.constraint(equalTo: container.topAnchor, constant: 12),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: container.bottomAnchor, constant: -12)
+        ])
+
+        stack.addArrangedSubview(titleLabel)
+        stack.addArrangedSubview(subtitleLabel)
+        rows.forEach { stack.addArrangedSubview($0) }
+
+        return container
+    }
+
+    private func labeledRow(title: String, control: NSView) -> NSView {
+        let titleLabel = NSTextField(labelWithString: title)
+        titleLabel.font = .systemFont(ofSize: 11, weight: .semibold)
+        titleLabel.textColor = .secondaryLabelColor
+
+        let stack = NSStackView(views: [titleLabel, control])
+        stack.orientation = .vertical
+        stack.spacing = 6
+        return stack
+    }
+
+    @objc private func roleChanged() {
+        let role = RelationshipRole.allCases[max(0, roleControl.indexOfSelectedItem)]
+        avatarControl.selectItem(withTitle: role.defaultPartnerAvatar.displayName)
+    }
+
+    @objc private func reunionVisibilityChanged() {
+        updateReunionControls()
+    }
+
+    private func updateReunionControls() {
+        reunionPicker.isEnabled = showReunionToggle.state == .on
+        reunionPicker.alphaValue = reunionPicker.isEnabled ? 1 : 0.55
+    }
+
+    @objc private func cancel() {
+        view.window?.close()
+    }
+
+    @objc private func saveSettings() {
+        let role = RelationshipRole.allCases[max(0, roleControl.indexOfSelectedItem)]
+        let localTimeZoneIdentifier = localTimeZoneControl.indexOfSelectedItem == 0 ? nil : localTimeZoneControl.titleOfSelectedItem
+        let partnerTimeZoneIdentifier = partnerTimeZoneControl.titleOfSelectedItem
+        let avatar = AvatarStyle.allCases[max(0, avatarControl.indexOfSelectedItem)]
+        let showsReunionCountdown = showReunionToggle.state == .on
+        let reunionDate = reunionPicker.dateValue
+
+        AppSettingsStore.shared.update(
+            relationshipRole: role,
+            localTimeZoneIdentifier: localTimeZoneIdentifier,
+            partnerTimeZoneIdentifier: partnerTimeZoneIdentifier,
+            partnerAvatar: avatar,
+            showsReunionCountdown: showsReunionCountdown,
+            reunionDate: reunionDate
+        )
+
+        view.window?.close()
     }
 }
 

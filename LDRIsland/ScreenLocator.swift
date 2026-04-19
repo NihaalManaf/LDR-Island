@@ -89,7 +89,7 @@ enum ScreenLocator {
             leadingBubbleWidth: leadingBubbleWidth,
             trailingBubbleWidth: trailingBubbleWidth,
             bodyWidth: bodyWidth,
-            bodyHeight: 192,
+            bodyHeight: 252,
             bodyTopSpacing: 0
         )
     }

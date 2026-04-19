@@ -1,7 +1,9 @@
 import AppKit
 
 final class PixelAvatarView: NSView {
-    private let avatarStyle: AvatarStyle
+    var avatarStyle: AvatarStyle {
+        didSet { needsDisplay = true }
+    }
     private var isBlinking = false
     private var blinkTimer: Timer?
     private var armsUp = false
@@ -21,6 +23,7 @@ final class PixelAvatarView: NSView {
 
     deinit {
         blinkTimer?.invalidate()
+        waveTimer?.invalidate()
     }
 
     override var intrinsicContentSize: NSSize {
@@ -134,7 +137,9 @@ final class PixelAvatarView: NSView {
             let body = armsUp ? womanBodyUp : womanBodyDown
             return head + body
         case .man:
-            return isBlinking ? manPatternBlink : manPattern
+            let head = isBlinking ? manHeadBlink : manHeadOpen
+            let body = armsUp ? manBodyUp : manBodyDown
+            return head + body
         }
     }
 
@@ -207,25 +212,47 @@ final class PixelAvatarView: NSView {
         "..PP.....PP.."
     ]
 
-    private let manPattern = [
-        "...HH...",
-        "..HSSH..",
-        "..SSSS..",
-        "..SSSS..",
-        "...SS...",
-        "..BBBB..",
-        ".BBBBBB.",
-        ".BB..BB."
+    private let manHeadOpen = [
+        "....HHHHH....",
+        "...HHHHHHH...",
+        "..HHHHHHHHH..",
+        ".HHHSSSSSHHH.",
+        ".HHSSSSSSSHH.",
+        "HHSSEESEESSHH",
+        "HHSSSSSSSSSHH",
+        "HHSSSMMMSSSHH",
+        ".HHSSSSSSSHH.",
+        "..HHSSSSSHH.."
     ]
 
-    private let manPatternBlink = [
-        "...HH...",
-        "..HSSH..",
-        "..MMMM..",
-        "..SSSS..",
-        "...SS...",
-        "..BBBB..",
-        ".BBBBBB.",
-        ".BB..BB."
+    private let manHeadBlink = [
+        "....HHHHH....",
+        "...HHHHHHH...",
+        "..HHHHHHHHH..",
+        ".HHHSSSSSHHH.",
+        ".HHSSSSSSSHH.",
+        "HHSSMMSMMSSHH",
+        "HHSSSSSSSSSHH",
+        "HHSSSMMMSSSHH",
+        ".HHSSSSSSSHH.",
+        "..HHSSSSSHH.."
+    ]
+
+    private let manBodyDown = [
+        "....BBBBB....",
+        "..SBBBBBBBS..",
+        ".SSBBBBBBBSS.",
+        "..BBBBBBBBB..",
+        "..BBB...BBB..",
+        "..BB.....BB.."
+    ]
+
+    private let manBodyUp = [
+        "....BBBBB....",
+        ".SSBBBBBBBSS.",
+        "..SBBBBBBBS..",
+        "..BBBBBBBBB..",
+        "..BBB...BBB..",
+        "..BB.....BB.."
     ]
 }
