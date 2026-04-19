@@ -1,4 +1,4 @@
-import AppKit
+ import AppKit
 import QuartzCore
 
 final class IslandViewController: NSViewController {
@@ -240,6 +240,8 @@ final class IslandViewController: NSViewController {
         NSLayoutConstraint.activate([
             partnerTimeLabel.leadingAnchor.constraint(equalTo: leadingBubble.leadingAnchor, constant: 18),
             partnerTimeLabel.trailingAnchor.constraint(lessThanOrEqualTo: leadingBubble.trailingAnchor, constant: -14),
+            partnerTimeLabel.topAnchor.constraint(greaterThanOrEqualTo: leadingBubble.topAnchor, constant: 4),
+            partnerTimeLabel.bottomAnchor.constraint(lessThanOrEqualTo: leadingBubble.bottomAnchor, constant: -4),
             partnerTimeLabel.centerYAnchor.constraint(equalTo: leadingBubble.centerYAnchor)
         ])
     }
@@ -249,7 +251,9 @@ final class IslandViewController: NSViewController {
 
         NSLayoutConstraint.activate([
             avatarView.centerXAnchor.constraint(equalTo: trailingBubble.centerXAnchor),
-            avatarView.centerYAnchor.constraint(equalTo: trailingBubble.centerYAnchor)
+            avatarView.centerYAnchor.constraint(equalTo: trailingBubble.centerYAnchor),
+            avatarView.widthAnchor.constraint(equalToConstant: 34),
+            avatarView.heightAnchor.constraint(equalToConstant: 34)
         ])
     }
 

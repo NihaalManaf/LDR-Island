@@ -62,7 +62,7 @@ enum ScreenLocator {
 
         if let notch = notchDimensions(on: preferredScreen()) {
             gapWidth = notch.width
-            headerHeight = notch.height
+            headerHeight = notch.height + 6
             hasHardwareNotch = true
         } else {
             gapWidth = 0
