@@ -49,32 +49,14 @@ final class IslandViewController: NSViewController {
     private let partnerMetaLabel = IslandViewController.makeLabel(fontSize: 11, weight: .medium, color: .secondaryLabelColor)
     private let offsetLabel = IslandViewController.makeLabel(fontSize: 11, weight: .bold, color: .systemBlue)
 
-    private let localNowLabel = IslandViewController.makeMonospacedLabel(fontSize: 12, weight: .medium)
-    private let partnerNowLabel = IslandViewController.makeMonospacedLabel(fontSize: 12, weight: .medium)
-    private let conversionSummaryLabel = IslandViewController.makeMonospacedLabel(fontSize: 14, weight: .semibold)
-    private let conversionDetailLabel = IslandViewController.makeLabel(fontSize: 11, weight: .medium, color: .secondaryLabelColor)
-    private let converterTitleLabel = IslandViewController.makeLabel(fontSize: 10, weight: .bold, color: .secondaryLabelColor)
-
-    private lazy var directionControl: NSSegmentedControl = {
-        let control = NSSegmentedControl(labels: ["Mine → Hers", "Hers → Mine"], trackingMode: .selectOne, target: self, action: #selector(conversionInputChanged))
-        control.translatesAutoresizingMaskIntoConstraints = false
-        control.selectedSegment = 0
-        control.segmentStyle = .rounded
-        return control
-    }()
-
-    private lazy var timePicker: NSDatePicker = {
-        let picker = NSDatePicker()
-        picker.translatesAutoresizingMaskIntoConstraints = false
-        picker.datePickerStyle = .textFieldAndStepper
-        picker.datePickerElements = [.hourMinute]
-        picker.datePickerMode = .single
-        picker.timeZone = .autoupdatingCurrent
-        picker.dateValue = Date()
-        picker.target = self
-        picker.action = #selector(conversionInputChanged)
-        return picker
-    }()
+    private let localConverterCaptionLabel = IslandViewController.makeLabel(fontSize: 10, weight: .bold, color: .secondaryLabelColor)
+    private let partnerConverterCaptionLabel = IslandViewController.makeLabel(fontSize: 10, weight: .bold, color: .secondaryLabelColor)
+    private let localDragTimeLabel = IslandViewController.makeMonospacedLabel(fontSize: 28, weight: .bold)
+    private let partnerDragTimeLabel = IslandViewController.makeMonospacedLabel(fontSize: 28, weight: .bold)
+    private let conversionMetaLabel = IslandViewController.makeLabel(fontSize: 12, weight: .semibold, color: .secondaryLabelColor)
+    private let dragHintLabel = IslandViewController.makeLabel(fontSize: 11, weight: .medium, color: .tertiaryLabelColor)
+    private let timelineView = TimeScrubberView()
+    private var selectedLocalMinutesFromMidnight: Int?
 
     init(configuration: AppConfiguration, timeService: TimeConversionService = TimeConversionService()) {
         self.configuration = configuration
@@ -240,25 +222,50 @@ final class IslandViewController: NSViewController {
         partnerMetaLabel.stringValue = "\(snapshot.partner.dayText) • \(snapshot.partner.zoneText)"
         offsetLabel.stringValue = snapshot.offsetText
 
-        localNowLabel.stringValue = "\(snapshot.local.name): \(snapshot.local.timeText) • \(snapshot.local.dayText) • \(snapshot.local.zoneText)"
-        partnerNowLabel.stringValue = "\(snapshot.partner.name): \(snapshot.partner.timeText) • \(snapshot.partner.dayText) • \(snapshot.partner.zoneText)"
+        if selectedLocalMinutesFromMidnight == nil {
+            let localCalendar = calendar(for: configuration.local.resolvedTimeZone)
+            let components = localCalendar.dateComponents([.hour, .minute], from: referenceDate)
+            selectedLocalMinutesFromMidnight = ((components.hour ?? 0) * 60) + (components.minute ?? 0)
+        }
 
         refreshConversion(referenceDate: referenceDate)
     }
 
     private func refreshConversion(referenceDate: Date) {
-        let components = Calendar.autoupdatingCurrent.dateComponents([.hour, .minute], from: timePicker.dateValue)
-        let direction = ConversionDirection(rawValue: directionControl.selectedSegment) ?? .localToPartner
+        let localMinutes = max(0, min(selectedLocalMinutesFromMidnight ?? 0, 23 * 60 + 59))
+        let components = DateComponents(hour: localMinutes / 60, minute: localMinutes % 60)
         let result = timeService.convert(
             timeOfDay: components,
-            direction: direction,
+            direction: .localToPartner,
             referenceDate: referenceDate,
             local: configuration.local,
             partner: configuration.partner
         )
 
-        conversionSummaryLabel.stringValue = result.summaryText
-        conversionDetailLabel.stringValue = result.detailText
+        localConverterCaptionLabel.stringValue = configuration.local.name.uppercased()
+        partnerConverterCaptionLabel.stringValue = configuration.partner.name.uppercased()
+        localDragTimeLabel.stringValue = formattedTime(
+            for: components,
+            referenceDate: referenceDate,
+            timeZone: configuration.local.resolvedTimeZone
+        )
+        partnerDragTimeLabel.stringValue = result.targetTimeText
+        let relativeDayText: String
+        switch result.shift {
+        case .sameDay:
+            relativeDayText = "Her time is the same day"
+        case .nextDay:
+            relativeDayText = "Her time is the next day"
+        case .previousDay:
+            relativeDayText = "Her time is the previous day"
+        case .days(let offset) where offset > 0:
+            relativeDayText = "Her time is \(offset) days later"
+        case .days(let offset):
+            relativeDayText = "Her time is \(abs(offset)) days earlier"
+        }
+
+        conversionMetaLabel.stringValue = "\(relativeDayText) • \(result.targetDayText) • \(result.targetZoneText)"
+        timelineView.minutesFromMidnight = localMinutes
     }
 
     private func buildUI() {
@@ -381,8 +388,8 @@ final class IslandViewController: NSViewController {
         let mainStack = NSStackView()
         mainStack.translatesAutoresizingMaskIntoConstraints = false
         mainStack.orientation = .vertical
-        mainStack.spacing = 12
-        mainStack.edgeInsets = NSEdgeInsets(top: 14, left: 14, bottom: 14, right: 14)
+        mainStack.spacing = 14
+        mainStack.edgeInsets = NSEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
 
         bodyPanel.addSubview(mainStack)
 
@@ -393,40 +400,70 @@ final class IslandViewController: NSViewController {
             mainStack.bottomAnchor.constraint(equalTo: bodyPanel.bottomAnchor)
         ])
 
-        let nowSection = NSStackView()
-        nowSection.orientation = .vertical
-        nowSection.spacing = 4
+        let topRow = NSStackView()
+        topRow.orientation = .horizontal
+        topRow.alignment = .top
+        topRow.distribution = .fillEqually
+        topRow.spacing = 14
 
-        let nowLabel = IslandViewController.makeLabel(fontSize: 10, weight: .bold, color: .secondaryLabelColor)
-        nowLabel.stringValue = "NOW"
+        let localColumn = NSStackView()
+        localColumn.orientation = .vertical
+        localColumn.spacing = 6
+        localDragTimeLabel.alignment = .left
+        localColumn.addArrangedSubview(localConverterCaptionLabel)
+        localColumn.addArrangedSubview(localDragTimeLabel)
 
-        nowSection.addArrangedSubview(nowLabel)
-        nowSection.addArrangedSubview(localNowLabel)
-        nowSection.addArrangedSubview(partnerNowLabel)
+        let partnerColumn = NSStackView()
+        partnerColumn.orientation = .vertical
+        partnerColumn.spacing = 6
+        partnerDragTimeLabel.alignment = .right
+        partnerConverterCaptionLabel.alignment = .right
+        partnerColumn.addArrangedSubview(partnerConverterCaptionLabel)
+        partnerColumn.addArrangedSubview(partnerDragTimeLabel)
 
-        let converterSection = NSStackView()
-        converterSection.orientation = .vertical
-        converterSection.spacing = 8
+        topRow.addArrangedSubview(localColumn)
+        topRow.addArrangedSubview(partnerColumn)
 
-        converterTitleLabel.stringValue = "CONVERT"
+        let arrowLabel = IslandViewController.makeLabel(fontSize: 16, weight: .bold, color: .secondaryLabelColor)
+        arrowLabel.alignment = .center
+        arrowLabel.stringValue = "YOUR TIME → HER TIME"
 
-        let inputRow = NSStackView()
-        inputRow.orientation = .horizontal
-        inputRow.alignment = .centerY
-        inputRow.spacing = 8
+        timelineView.translatesAutoresizingMaskIntoConstraints = false
+        timelineView.heightAnchor.constraint(equalToConstant: 32).isActive = true
+        timelineView.onMinutesChanged = { [weak self] minutes in
+            self?.selectedLocalMinutesFromMidnight = minutes
+            self?.refreshConversion(referenceDate: Date())
+        }
 
-        timePicker.widthAnchor.constraint(greaterThanOrEqualToConstant: 116).isActive = true
+        conversionMetaLabel.alignment = .center
+        conversionMetaLabel.maximumNumberOfLines = 2
+        conversionMetaLabel.lineBreakMode = .byWordWrapping
 
-        inputRow.addArrangedSubview(directionControl)
-        inputRow.addArrangedSubview(timePicker)
+        mainStack.addArrangedSubview(topRow)
+        mainStack.addArrangedSubview(arrowLabel)
+        mainStack.addArrangedSubview(timelineView)
+        mainStack.addArrangedSubview(conversionMetaLabel)
+    }
 
-        converterSection.addArrangedSubview(converterTitleLabel)
-        converterSection.addArrangedSubview(inputRow)
-        converterSection.addArrangedSubview(conversionSummaryLabel)
-        converterSection.addArrangedSubview(conversionDetailLabel)
+    private func calendar(for timeZone: TimeZone) -> Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        return calendar
+    }
 
-        mainStack.addArrangedSubview(nowSection)
-        mainStack.addArrangedSubview(converterSection)
+    private func formattedTime(for components: DateComponents, referenceDate: Date, timeZone: TimeZone) -> String {
+        let cal = calendar(for: timeZone)
+        var day = cal.dateComponents([.year, .month, .day], from: referenceDate)
+        day.hour = components.hour
+        day.minute = components.minute
+        day.second = 0
+        let date = cal.date(from: day) ?? referenceDate
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = timeZone
+        formatter.dateFormat = "h:mm a"
+        return formatter.string(from: date)
     }
 
     private static func makeLabel(fontSize: CGFloat, weight: NSFont.Weight, color: NSColor) -> NSTextField {
@@ -475,6 +512,92 @@ final class HoverTrackingContainerView: NSView {
     override func mouseExited(with event: NSEvent) {
         super.mouseExited(with: event)
         onHoverChanged?(false)
+    }
+}
+
+final class TimeScrubberView: NSControl {
+    var onMinutesChanged: ((Int) -> Void)?
+
+    var minutesFromMidnight: Int = 0 {
+        didSet {
+            minutesFromMidnight = max(0, min(minutesFromMidnight, 23 * 60 + 59))
+            needsDisplay = true
+        }
+    }
+
+    override var acceptsFirstResponder: Bool {
+        true
+    }
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+
+        let trackRect = bounds.insetBy(dx: 6, dy: 12)
+        let activeWidth = max(0, min(trackRect.width, trackRect.width * CGFloat(minutesFromMidnight) / CGFloat(23 * 60 + 59)))
+
+        NSColor.white.withAlphaComponent(0.12).setFill()
+        NSBezierPath(roundedRect: trackRect, xRadius: trackRect.height / 2, yRadius: trackRect.height / 2).fill()
+
+        let activeRect = NSRect(x: trackRect.minX, y: trackRect.minY, width: activeWidth, height: trackRect.height)
+        NSColor.systemPink.withAlphaComponent(0.9).setFill()
+        NSBezierPath(roundedRect: activeRect, xRadius: trackRect.height / 2, yRadius: trackRect.height / 2).fill()
+
+        let knobX = trackRect.minX + activeWidth
+        let knobRect = NSRect(x: knobX - 8, y: bounds.midY - 8, width: 16, height: 16)
+        NSColor.white.setFill()
+        NSBezierPath(ovalIn: knobRect).fill()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        window?.makeFirstResponder(self)
+        update(with: convert(event.locationInWindow, from: nil).x)
+
+        while let nextEvent = window?.nextEvent(matching: [.leftMouseDragged, .leftMouseUp]) {
+            let localPoint = convert(nextEvent.locationInWindow, from: nil)
+            update(with: localPoint.x)
+
+            if nextEvent.type == .leftMouseUp {
+                break
+            }
+        }
+    }
+
+    override func scrollWheel(with event: NSEvent) {
+        let step = event.modifierFlags.contains(.shift) ? 30 : 15
+        let delta = event.scrollingDeltaY == 0 ? event.scrollingDeltaX : event.scrollingDeltaY
+        minutesFromMidnight += delta > 0 ? -step : step
+        onMinutesChanged?(minutesFromMidnight)
+    }
+
+    override func keyDown(with event: NSEvent) {
+        switch event.keyCode {
+        case 123:
+            minutesFromMidnight -= event.modifierFlags.contains(.shift) ? 30 : 15
+            onMinutesChanged?(minutesFromMidnight)
+        case 124:
+            minutesFromMidnight += event.modifierFlags.contains(.shift) ? 30 : 15
+            onMinutesChanged?(minutesFromMidnight)
+        default:
+            super.keyDown(with: event)
+        }
+    }
+
+    private func update(with x: CGFloat) {
+        let trackRect = bounds.insetBy(dx: 6, dy: 12)
+        guard trackRect.width > 0 else { return }
+        let progress = max(0, min(1, (x - trackRect.minX) / trackRect.width))
+        minutesFromMidnight = Int(round(progress * CGFloat(23 * 60 + 59)))
+        onMinutesChanged?(minutesFromMidnight)
     }
 }
 
