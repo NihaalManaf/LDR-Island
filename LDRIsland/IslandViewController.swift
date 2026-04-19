@@ -116,7 +116,7 @@ final class IslandViewController: NSViewController {
     }
 
     private var collapsedBodyRevealWidth: CGFloat {
-        min(layoutMetrics.bodyWidth, max(layoutMetrics.headerWidth, layoutMetrics.bodyWidth * 0.84))
+        layoutMetrics.headerWidth
     }
 
     override func loadView() {
@@ -556,12 +556,25 @@ private extension NSBezierPath {
             return nil
         }
 
+        let closedBottomCornerRadius: CGFloat = 20
+
         guard bodyRect.width > 1, bodyRect.height > 1 else {
-            return notchSurface(in: headerRect, topCornerRadius: 6, bottomCornerRadius: 20)
+            return notchSurface(in: headerRect, topCornerRadius: 6, bottomCornerRadius: closedBottomCornerRadius)
         }
 
         let topR = min(CGFloat(6), headerRect.width / 4, headerRect.height / 4)
-        let bottomR = min(CGFloat(18), bodyRect.width / 4, bodyRect.height / 2)
+
+        if bodyRect.width <= headerRect.width + 0.5 {
+            let closingRect = NSRect(
+                x: headerRect.minX,
+                y: min(bodyRect.minY, headerRect.minY),
+                width: headerRect.width,
+                height: headerRect.maxY - min(bodyRect.minY, headerRect.minY)
+            )
+            return notchSurface(in: closingRect, topCornerRadius: topR, bottomCornerRadius: closedBottomCornerRadius)
+        }
+
+        let bottomR = min(closedBottomCornerRadius, bodyRect.width / 4, bodyRect.height / 2)
         let shoulderDepth = min(CGFloat(12), max(CGFloat(6), (headerRect.height - topR) * 0.38))
         let leftCapEdgeX = headerRect.minX + topR
         let rightCapEdgeX = headerRect.maxX - topR
