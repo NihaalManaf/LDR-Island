@@ -2,6 +2,14 @@
 
 <p align="center">A tiny native macOS notch companion for long-distance relationships.</p>
 
+<p align="center">
+  <img src="docs/images/ldr-island-compact.png" alt="LDR Island compact notch view" width="900" />
+</p>
+
+<p align="center">
+  <img src="docs/images/ldr-island-expanded.png" alt="LDR Island expanded notch extension" width="900" />
+</p>
+
 LDR Island lives at the top of your screen, shows your partner's current time in the compact island, and opens into a smooth **LDR notch extension** with a draggable time converter, reunion countdown, and relationship-aware settings.
 
 ## Features
